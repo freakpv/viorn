@@ -1,11 +1,10 @@
-extern crate args;
 extern crate getopts;
 
+use anyhow::Context;
 use args::Args;
 use getopts::Occur;
-use std::error::Error;
 
-fn main() -> Result<(), Box<dyn Error>> {
+fn main() -> anyhow::Result<()> {
     let mut args = Args::new("viorn", "traffic filter");
     args.flag("H", "help", "Prints this help information");
     args.flag("V", "version", "Version information about the binary");
@@ -25,6 +24,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         println!("{}", args.full_usage());
         return Ok(());
     }
+
     let version = args.value_of("version")?;
     if version {
         const SHA: Option<&str> = option_env!("GIT_HASH");
@@ -37,5 +37,14 @@ fn main() -> Result<(), Box<dyn Error>> {
         return Ok(());
     }
 
-    Ok(())
+    args.value_of::<String>("config")
+        .map_err(Into::into)
+        .and_then(|config| {
+            std::fs::read_to_string(&config)
+                .with_context(|| format!("Failed to read config {}", config))
+                .map_err(Into::into)
+        })
+        .and_then(|config| config.parse::<toml::Table>().map_err(Into::into))
+        //.and_then(|config| config.get_table("rules").map_err(Into::into))
+        .and_then(|_| Ok(()))
 }
