@@ -1,8 +1,7 @@
-extern crate getopts;
-
-use anyhow::Context;
 use args::Args;
 use getopts::Occur;
+
+mod app;
 
 fn main() -> anyhow::Result<()> {
     let mut args = Args::new("viorn", "traffic filter");
@@ -39,12 +38,6 @@ fn main() -> anyhow::Result<()> {
 
     args.value_of::<String>("config")
         .map_err(Into::into)
-        .and_then(|config| {
-            std::fs::read_to_string(&config)
-                .with_context(|| format!("Failed to read config {}", config))
-                .map_err(Into::into)
-        })
-        .and_then(|config| config.parse::<toml::Table>().map_err(Into::into))
-        //.and_then(|config| config.get_table("rules").map_err(Into::into))
-        .and_then(|_| Ok(()))
+        .and_then(|config| app::Viorn::new(&config))
+        .and_then(|mut instance| Ok(instance.run()))
 }
