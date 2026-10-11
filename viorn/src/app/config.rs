@@ -5,6 +5,7 @@ use std::{error::Error, fmt};
 pub(super) struct Config {
     filter: Filter,
     _mgmt_server: MgmtServer,
+    pub(super) logging: Logging,
 }
 
 #[derive(Debug, Deserialize)]
@@ -19,6 +20,13 @@ pub(super) struct Filter {
 pub(super) struct MgmtServer {
     _addr: std::net::IpAddr,
     _port: u16,
+}
+
+#[derive(Debug, Deserialize)]
+pub(super) struct Logging {
+    _file_path: std::path::PathBuf,
+    _max_size_mb: u32,
+    pub(super) log_level: String,
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -69,7 +77,7 @@ impl fmt::Display for ConfigError {
 impl Error for ConfigError {}
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
-
+// TODO: Write unit tests
 impl Config {
     pub(super) fn load(config_data: &str) -> anyhow::Result<Config> {
         let mut config: Config = toml::from_str(&config_data)?;

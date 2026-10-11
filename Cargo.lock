@@ -185,6 +185,7 @@ dependencies = [
  "anyhow",
  "args",
  "getopts",
+ "lid",
  "serde",
  "toml",
 ]
