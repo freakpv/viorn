@@ -39,5 +39,5 @@ fn main() -> anyhow::Result<()> {
     args.value_of::<String>("config")
         .map_err(Into::into)
         .and_then(|config| app::Viorn::new(&config))
-        .and_then(|mut instance| Ok(instance.run()))
+        .and_then(|mut instance| instance.run())
 }

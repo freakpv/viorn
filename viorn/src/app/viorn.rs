@@ -1,8 +1,12 @@
 use super::config::Config;
 use anyhow::Context;
 use std::path::Path;
+use std::thread;
 
-pub struct Viorn {}
+pub struct Viorn {
+    logger: lid::log::Logger,
+    cnt_runners: usize,
+}
 
 impl Viorn {
     pub fn new<P: AsRef<Path>>(config_path: P) -> anyhow::Result<Viorn> {
@@ -10,16 +14,34 @@ impl Viorn {
             .with_context(|| format!("Failed to read config {}", config_path.as_ref().display()))
             .and_then(|config_data| Config::load(&config_data))?;
 
-        let _log_level: lid::log::Level = config
-            .logging
-            .log_level
-            .parse()
-            .map_err(anyhow::Error::msg)?;
+        let logger = lid::log::Logger::new(
+            config.logging.file_path.as_path(),
+            config.logging.max_size_mb as u64 * 1024 * 1024,
+            config
+                .logging
+                .log_level
+                .parse()
+                .map_err(anyhow::Error::msg)?,
+        );
 
-        Ok(Viorn {})
+        Ok(Viorn {
+            logger: logger,
+            cnt_runners: config.filter.queues.len(),
+        })
     }
 
-    pub fn run(&mut self) {
-        // TODO
+    pub fn run(&mut self) -> anyhow::Result<()> {
+        let logger = &self.logger;
+        thread::scope(|s| {
+            let mut runners = vec![];
+            runners.reserve_exact(self.cnt_runners);
+            for i in 0..self.cnt_runners {
+                runners.push(s.spawn(move || {
+                    // TODO
+                    lid::log_info!(logger, "This is thread{}\n", i);
+                }));
+            }
+        });
+        Ok(())
     }
 }

@@ -3,29 +3,29 @@ use std::{error::Error, fmt};
 
 #[derive(Debug, Deserialize)]
 pub(super) struct Config {
-    filter: Filter,
-    _mgmt_server: MgmtServer,
+    pub(super) filter: Filter,
+    pub(super) mgmt_server: MgmtServer,
     pub(super) logging: Logging,
 }
 
 #[derive(Debug, Deserialize)]
 pub(super) struct Filter {
-    _dev: String,
-    _queues: Vec<u32>,
-    tcp_ports: Vec<PortRange>,
-    udp_ports: Vec<PortRange>,
+    pub(super) dev: String,
+    pub(super) queues: Vec<u32>,
+    pub(super) tcp_ports: Vec<PortRange>,
+    pub(super) udp_ports: Vec<PortRange>,
 }
 
 #[derive(Debug, Deserialize)]
 pub(super) struct MgmtServer {
-    _addr: std::net::IpAddr,
-    _port: u16,
+    pub(super) addr: std::net::IpAddr,
+    pub(super) port: u16,
 }
 
 #[derive(Debug, Deserialize)]
 pub(super) struct Logging {
-    _file_path: std::path::PathBuf,
-    _max_size_mb: u32,
+    pub(super) file_path: std::path::PathBuf,
+    pub(super) max_size_mb: u32,
     pub(super) log_level: String,
 }
 
