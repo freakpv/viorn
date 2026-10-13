@@ -5,7 +5,7 @@ use std::thread;
 
 pub struct Viorn {
     logger: lid::log::Logger,
-    cnt_runners: usize,
+    queues: Vec<u32>,
 }
 
 impl Viorn {
@@ -22,20 +22,21 @@ impl Viorn {
                 .log_level
                 .parse()
                 .map_err(anyhow::Error::msg)?,
-        );
+        )?;
 
         Ok(Viorn {
             logger: logger,
-            cnt_runners: config.filter.queues.len(),
+            queues: config.filter.queues,
         })
     }
 
     pub fn run(&mut self) -> anyhow::Result<()> {
         let logger = &self.logger;
+        let cnt_runners = self.queues.len();
         thread::scope(|s| {
             let mut runners = vec![];
-            runners.reserve_exact(self.cnt_runners);
-            for i in 0..self.cnt_runners {
+            runners.reserve_exact(cnt_runners);
+            for i in 0..cnt_runners {
                 runners.push(s.spawn(move || {
                     // TODO
                     lid::log_info!(logger, "This is thread{}\n", i);
