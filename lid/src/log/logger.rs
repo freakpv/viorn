@@ -1,16 +1,20 @@
 use super::level::LogLevel;
+use super::log_file::LogFile;
 use crate::time;
 use std::io;
+use std::sync::mpsc;
 use std::vec::Vec;
 
 thread_local! {
     static THREAD_ID: u32 = unsafe { libc::gettid() as u32 };
 }
 
+const MAX_REM_FILE_SIZE: u64 = 100 * 1024 * 1024u64;
+const LOG_QUEUE_SIZE: usize = 1024;
+
 pub struct Logger {
-    max_file_size: u64,
-    cur_file_size: std::sync::Mutex<u64>,
-    log_file: std::sync::Mutex<std::fs::File>,
+    log_thread: std::thread::JoinHandle<()>,
+    msg_sender: mpsc::SyncSender<Vec<u8>>,
     process_id: u32,
     log_level: LogLevel,
 }
@@ -21,13 +25,17 @@ impl Logger {
         max_file_size: u64,
         log_level: LogLevel,
     ) -> io::Result<Logger> {
-        use std::fs::OpenOptions;
-        let log_file = OpenOptions::new().append(true).open(file_path)?;
-        let meta = log_file.metadata()?;
+        let rem_file_size = std::cmp::min(MAX_REM_FILE_SIZE, (5 * max_file_size) / 100);
+        let log_file = LogFile::open(file_path, max_file_size, rem_file_size)?;
+        let (msg_sender, msg_receiver) = mpsc::sync_channel(LOG_QUEUE_SIZE);
+        let log_thread = std::thread::Builder::new()
+            .name("lid_logger".to_string())
+            .spawn(move || {
+                Self::process_msgs(msg_receiver, log_file);
+            })?;
         Ok(Logger {
-            max_file_size: max_file_size,
-            cur_file_size: meta.len().into(),
-            log_file: log_file.into(),
+            log_thread: log_thread,
+            msg_sender: msg_sender,
             process_id: std::process::id(),
             log_level: log_level,
         })
@@ -39,28 +47,37 @@ impl Logger {
     }
 
     pub fn write_msg(&self, lvl: LogLevel, msg_args: std::fmt::Arguments<'_>) {
-        let msg = Self::create_msg(self.process_id, THREAD_ID.with(|id| *id), lvl, msg_args);
-        let mut cur_size = self.cur_file_size.lock().unwrap();
-        *cur_size += msg.len() as u64;
-
-        let mut log_file = self.log_file.lock().unwrap();
-
-        if *cur_size > self.max_file_size {
-            let rem_len = std::cmp::min(100 * 1024 * 1024u64, (5 * self.max_file_size) / 100);
-            use crate::fsext::FileExt;
-            let _ = log_file.remove_range(0, rem_len as i64);
-        }
-
         use std::io::Write;
-        let _ = log_file.write(&msg);
-    }
-
-    fn create_msg(pid: u32, tid: u32, lvl: LogLevel, msg_args: std::fmt::Arguments<'_>) -> Vec<u8> {
-        use std::io::Write;
+        // TODO: Allocator
         let mut msg = std::vec::Vec::with_capacity(512);
         if let Ok(dt) = time::UtcDatetime::now() {
-            write!(msg, "{} {} {} {}: {}", dt, pid, tid, lvl.as_str(), msg_args).unwrap();
+            write!(
+                msg,
+                "{} {} {} {}: {}",
+                dt,
+                self.process_id,
+                THREAD_ID.with(|id| *id),
+                lvl.as_str(),
+                msg_args
+            )
+            .unwrap();
         }
-        msg
+        // TODO: Count dropped
+        let _ = self.msg_sender.try_send(msg);
+    }
+
+    fn process_msgs(msg_receiver: mpsc::Receiver<Vec<u8>>, mut log_file: LogFile) {
+        while let Ok(msg) = msg_receiver.recv() {
+            // TODO: Count the failures
+            let _ = log_file.append(&msg);
+        }
+    }
+}
+
+impl Drop for Logger {
+    fn drop(&mut self) {
+        // TODO:
+        // drop(self.msg_sender);
+        self.log_thread.join().unwrap();
     }
 }

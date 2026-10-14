@@ -1,4 +1,5 @@
 pub mod level;
+pub mod log_file;
 pub mod logger;
 pub use level::LogLevel;
 pub use logger::Logger;
