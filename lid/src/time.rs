@@ -1,3 +1,6 @@
+use std::fmt;
+use std::mem::MaybeUninit;
+
 // Very simple timestamp, timestamp -> date-time utilities base on some libc functions.
 // The reasons for creating and using these utilities are the following:
 // 1. The timestamp obtained from the std::time::SystemTime::now() can be easily/directly converted
@@ -13,12 +16,12 @@
 
 // This is a bit of a hack but this actually provides all of the needed functionality for an OS
 // error
-use OsError = std::io::Error;
+type OsError = std::io::Error;
 
 pub struct UtcTime {
     pub sec: i64,
     pub usec: i32,
-};
+}
 
 pub struct UtcDatetime {
     pub year: i32,
@@ -33,12 +36,12 @@ pub struct UtcDatetime {
 impl UtcTime {
     pub fn now() -> Result<UtcTime, OsError> {
         let mut ts = MaybeUninit::<libc::timeval>::uninit();
-        let ts = unsafe { libc::gettimeofday(ts.as_mut_ptr(), std::ptr::null_mut()); }
+        let rc = unsafe { libc::gettimeofday(ts.as_mut_ptr(), std::ptr::null_mut()) };
         if rc == 0 {
-            let ts = unsafe { ts.assume_init(); }
-            Ok(UtcTime{
+            let ts = unsafe { ts.assume_init() };
+            Ok(UtcTime {
                 sec: ts.tv_sec,
-                usec: ts.tv_usec,
+                usec: ts.tv_usec as i32,
             })
         } else {
             Err(OsError::last_os_error())
@@ -48,13 +51,13 @@ impl UtcTime {
     pub fn to_datetime(&self) -> Result<UtcDatetime, OsError> {
         let mut tm = MaybeUninit::<libc::tm>::uninit();
         let ts: libc::time_t = self.sec;
-        let res = unsafe { libc::gmtime_r(&ts, tm.as_mut_ptr()); }
+        let res = unsafe { libc::gmtime_r(&ts, tm.as_mut_ptr()) };
         if !res.is_null() {
-            let tm = unsafe { tm.assume_init(); }
-            Ok(UtcDatetime{
+            let tm = unsafe { tm.assume_init() };
+            Ok(UtcDatetime {
                 year: 1900 + tm.tm_year,
                 mon: 1 + tm.tm_mon,
-                day: tm.tm_day,
+                day: tm.tm_mday,
                 hour: tm.tm_hour,
                 min: tm.tm_min,
                 sec: tm.tm_sec,
@@ -72,12 +75,6 @@ impl UtcDatetime {
     }
 }
 
-impl From<UtcTime> for UtcDatetime {
-    fn from(t: UtcTime) -> UtcDatetime {
-        t.to_datetime()
-    }
-}
-
 impl fmt::Display for UtcTime {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}.{:06}", self.sec, self.usec)
@@ -92,7 +89,11 @@ impl fmt::Debug for UtcTime {
 
 impl fmt::Display for UtcDatetime {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{:04}-{:02}-{:02} {:02}:{:02}:{:02}.{:06}", self.year, self.mon, self.day, self.hour, self.min, self.sec, self.usec)
+        write!(
+            f,
+            "{:04}-{:02}-{:02} {:02}:{:02}:{:02}.{:06}",
+            self.year, self.mon, self.day, self.hour, self.min, self.sec, self.usec
+        )
     }
 }
 
