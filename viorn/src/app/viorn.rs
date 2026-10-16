@@ -3,6 +3,13 @@ use anyhow::Context;
 use std::path::Path;
 use std::thread;
 
+/*
+const MAX_REM_FILE_SIZE: u64 = 100 * 1024 * 1024u64;
+const LOG_QUEUE_SIZE: usize = 1024;
+        let rem_file_size = std::cmp::min(MAX_REM_FILE_SIZE, (5 * max_file_size) / 100);
+        let log_file = LogFile::open(file_path, max_file_size, rem_file_size)?;
+*/
+
 pub struct Viorn {
     logger: lid::log::Logger,
     queues: Vec<u32>,
@@ -35,7 +42,10 @@ impl Viorn {
         let cnt_runners = self.queues.len();
         thread::scope(|s| {
             let mut runners = vec![];
-            runners.reserve_exact(cnt_runners);
+            runners.reserve_exact(cnt_runners + 1);
+            runners.push(s.spawn(|| {
+                logger.run();
+            }));
             for i in 0..cnt_runners {
                 runners.push(s.spawn(move || {
                     // TODO
