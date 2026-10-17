@@ -6,7 +6,7 @@ use std::io;
 use std::sync::mpsc;
 use std::sync::Mutex;
 
-pub type LogSinks = [Option<Box<dyn LogSink>>; 4];
+type LogSinks = fastvec::SmallVec<Box<dyn LogSink>, 4>;
 
 pub struct Logger {
     log_sinks: Mutex<LogSinks>,
@@ -17,11 +17,19 @@ pub struct Logger {
 }
 
 impl Logger {
-    pub fn new(log_level: LogLevel, log_queue_size: usize, log_sinks: LogSinks) -> Logger {
+    pub fn new(
+        log_level: LogLevel,
+        log_queue_size: usize,
+        log_sinks: impl IntoIterator<Item = Box<dyn LogSink>>,
+    ) -> Logger {
         assert!(log_queue_size > 0);
         let (msg_sender, msg_receiver) = mpsc::sync_channel(log_queue_size);
+        let mut temp_sinks = LogSinks::new();
+        for sink in log_sinks {
+            temp_sinks.push(sink);
+        }
         Logger {
-            log_sinks: log_sinks.into(),
+            log_sinks: temp_sinks.into(),
             msg_receiver: msg_receiver.into(),
             msg_sender: msg_sender,
             process_id: std::process::id(),
@@ -66,9 +74,7 @@ impl Logger {
             }
             // TODO: Count the failures
             for sink in sinks.iter_mut() {
-                if let Some(sink) = sink {
-                    let _ = sink.log(&msg);
-                }
+                let _ = sink.log(&msg);
             }
         }
     }

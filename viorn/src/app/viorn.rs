@@ -28,8 +28,11 @@ impl Viorn {
             max_file_size,
             rem_file_size,
         )?;
-        let log_synks: lid::log::LogSinks = [Some(Box::new(sliding_log)), None, None, None];
-        let logger = lid::log::Logger::new(log_level, LOG_QUEUE_SIZE, log_synks);
+        let logger = lid::log::Logger::new(
+            log_level,
+            LOG_QUEUE_SIZE,
+            [Box::new(sliding_log) as Box<dyn lid::log::LogSink>],
+        );
 
         Ok(Viorn {
             logger: logger,

@@ -3,7 +3,6 @@ pub mod logger;
 pub mod msg;
 pub mod sink;
 pub use level::LogLevel;
-pub use logger::LogSinks;
 pub use logger::Logger;
 pub use msg::LogMsg;
 pub use sink::LogSink;
