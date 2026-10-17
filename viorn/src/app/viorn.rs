@@ -3,12 +3,8 @@ use anyhow::Context;
 use std::path::Path;
 use std::thread;
 
-/*
-const MAX_REM_FILE_SIZE: u64 = 100 * 1024 * 1024u64;
 const LOG_QUEUE_SIZE: usize = 1024;
-        let rem_file_size = std::cmp::min(MAX_REM_FILE_SIZE, (5 * max_file_size) / 100);
-        let log_file = LogFile::open(file_path, max_file_size, rem_file_size)?;
-*/
+const MAX_REM_FILE_SIZE: u64 = 100 * 1024 * 1024u64;
 
 pub struct Viorn {
     logger: lid::log::Logger,
@@ -20,16 +16,20 @@ impl Viorn {
         let config = std::fs::read_to_string(&config_path)
             .with_context(|| format!("Failed to read config {}", config_path.as_ref().display()))
             .and_then(|config_data| Config::load(&config_data))?;
-
-        let logger = lid::log::Logger::new(
+        let log_level = config
+            .logging
+            .log_level
+            .parse()
+            .map_err(anyhow::Error::msg)?;
+        let max_file_size = config.logging.max_size_mb as u64 * 1024 * 1024;
+        let rem_file_size = std::cmp::min(MAX_REM_FILE_SIZE, (5 * max_file_size) / 100);
+        let sliding_log = lid::log::SlidingLogFile::open(
             config.logging.file_path.as_path(),
-            config.logging.max_size_mb as u64 * 1024 * 1024,
-            config
-                .logging
-                .log_level
-                .parse()
-                .map_err(anyhow::Error::msg)?,
+            max_file_size,
+            rem_file_size,
         )?;
+        let log_synks: lid::log::LogSinks = [Some(Box::new(sliding_log)), None, None, None];
+        let logger = lid::log::Logger::new(log_level, LOG_QUEUE_SIZE, log_synks);
 
         Ok(Viorn {
             logger: logger,

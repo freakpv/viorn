@@ -6,10 +6,10 @@ use std::io;
 use std::sync::mpsc;
 use std::sync::Mutex;
 
-const MAX_NUM_SINKS: usize = 4;
+pub type LogSinks = [Option<Box<dyn LogSink>>; 4];
 
 pub struct Logger {
-    log_sinks: Mutex<[Box<dyn LogSink>; MAX_NUM_SINKS]>,
+    log_sinks: Mutex<LogSinks>,
     msg_receiver: Mutex<mpsc::Receiver<LogMsg>>,
     msg_sender: mpsc::SyncSender<LogMsg>,
     process_id: u32,
@@ -17,20 +17,16 @@ pub struct Logger {
 }
 
 impl Logger {
-    pub fn new(
-        log_level: LogLevel,
-        log_queue_size: usize,
-        log_sinks: [Box<dyn LogSink>; MAX_NUM_SINKS],
-    ) -> io::Result<Logger> {
+    pub fn new(log_level: LogLevel, log_queue_size: usize, log_sinks: LogSinks) -> Logger {
         assert!(log_queue_size > 0);
         let (msg_sender, msg_receiver) = mpsc::sync_channel(log_queue_size);
-        Ok(Logger {
+        Logger {
             log_sinks: log_sinks.into(),
             msg_receiver: msg_receiver.into(),
             msg_sender: msg_sender,
             process_id: std::process::id(),
             log_level: log_level,
-        })
+        }
     }
 
     #[inline]
@@ -69,8 +65,10 @@ impl Logger {
                 break;
             }
             // TODO: Count the failures
-            for sink in sinks.iter() {
-                let _ = sink.log(&msg);
+            for sink in sinks.iter_mut() {
+                if let Some(sink) = sink {
+                    let _ = sink.log(&msg);
+                }
             }
         }
     }

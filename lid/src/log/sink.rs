@@ -2,7 +2,7 @@ use std::io;
 
 use super::msg::LogMsg;
 
-pub trait LogSink {
+pub trait LogSink: Send {
     fn log(&mut self, msg: &LogMsg) -> io::Result<()>;
 }
 
