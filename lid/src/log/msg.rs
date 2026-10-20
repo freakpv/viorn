@@ -14,6 +14,17 @@ pub struct LogMsg {
 }
 
 impl LogMsg {
+    pub(super) fn empty() -> LogMsg {
+        const EMPTY_RNG: Range<usize> = Range { start: 0, end: 0 };
+        LogMsg {
+            full: Vec::new(),
+            datetime: EMPTY_RNG,
+            pid: EMPTY_RNG,
+            tid: EMPTY_RNG,
+            level: EMPTY_RNG,
+            msg: EMPTY_RNG,
+        }
+    }
     pub(super) fn create(
         dt: time::UtcDatetime,
         pid: u32,

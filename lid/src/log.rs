@@ -14,7 +14,7 @@ pub use sink::SlidingLogFile;
 macro_rules! log_error {
     ($logger:expr, $($arg:tt)*) => {{
         let logger = &$logger;
-        if logger.allowed_log_level($crate::log::LogLevel::Error) {
+        if logger.is_allowed($crate::log::LogLevel::Error) {
             logger.log($crate::log::LogLevel::Error, format_args!($($arg)*));
         }
     }};
@@ -24,7 +24,7 @@ macro_rules! log_error {
 macro_rules! log_warn {
     ($logger:expr, $($arg:tt)*) => {{
         let logger = &$logger;
-        if logger.allowed_log_level($crate::log::LogLevel::Warn) {
+        if logger.is_allowed($crate::log::LogLevel::Warn) {
             logger.log($crate::log::LogLevel::Warn, format_args!($($arg)*));
         }
     }};
@@ -34,7 +34,7 @@ macro_rules! log_warn {
 macro_rules! log_info {
     ($logger:expr, $($arg:tt)*) => {{
         let logger = &$logger;
-        if logger.allowed_log_level($crate::log::LogLevel::Info) {
+        if logger.is_allowed($crate::log::LogLevel::Info) {
             logger.log($crate::log::LogLevel::Info, format_args!($($arg)*));
         }
     }};
@@ -44,7 +44,7 @@ macro_rules! log_info {
 macro_rules! log_debug {
     ($logger:expr, $($arg:tt)*) => {{
         let logger = &$logger;
-        if logger.allowed_log_level($crate::log::LogLevel::Debug) {
+        if logger.is_allowed($crate::log::LogLevel::Debug) {
             logger.log($crate::log::LogLevel::Debug, format_args!($($arg)*));
         }
     }};

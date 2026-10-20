@@ -8,6 +8,11 @@ use std::sync::Mutex;
 
 type LogSinks = fastvec::SmallVec<Box<dyn LogSink>, 4>;
 
+// The sinks and the message receiver are always going to be used from inside the run method which
+// is supposed to be called on a different thread but only one thread. However, in order to make
+// the borrow checker happy we either need to separate these two members into a separate struct or
+// we need to wrap them in a Mutex. The cost is single mutex lock/unlock for the whole run of the
+// logger, so it's not that bad just annoying.
 pub struct Logger {
     log_sinks: Mutex<LogSinks>,
     msg_receiver: Mutex<mpsc::Receiver<LogMsg>>,
@@ -24,12 +29,8 @@ impl Logger {
     ) -> Logger {
         assert!(log_queue_size > 0);
         let (msg_sender, msg_receiver) = mpsc::sync_channel(log_queue_size);
-        let mut temp_sinks = LogSinks::new();
-        for sink in log_sinks {
-            temp_sinks.push(sink);
-        }
         Logger {
-            log_sinks: temp_sinks.into(),
+            log_sinks: log_sinks.into_iter().collect::<LogSinks>().into(),
             msg_receiver: msg_receiver.into(),
             msg_sender: msg_sender,
             process_id: std::process::id(),
@@ -38,7 +39,7 @@ impl Logger {
     }
 
     #[inline]
-    pub fn allowed_log_level(&self, lvl: LogLevel) -> bool {
+    pub fn is_allowed(&self, lvl: LogLevel) -> bool {
         return lvl <= self.log_level;
     }
 
@@ -77,6 +78,10 @@ impl Logger {
                 let _ = sink.log(&msg);
             }
         }
+    }
+
+    pub fn stop(&self) {
+        let _ = self.msg_sender.send(LogMsg::empty());
     }
 }
 
