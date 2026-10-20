@@ -14,7 +14,8 @@ pub struct Viorn {
 
 impl Viorn {
     pub fn new<P: AsRef<Path>>(config_path: P) -> anyhow::Result<Viorn> {
-        let sig_sub = lid::signal::subscribe(&[lid::signal::SIGINT, lid::signal::SIGTERM])?;
+        use lid::signal;
+        let sig_sub = signal::subscribe(lid::bitmask!(signal::SIGINT, signal::SIGTERM))?;
         let config = std::fs::read_to_string(&config_path)
             .with_context(|| format!("Failed to read config {}", config_path.as_ref().display()))
             .and_then(|config_data| Config::load(&config_data))?;
@@ -55,10 +56,8 @@ impl Viorn {
             }));
             // TODO: Implement .await later to integrate it with the rest of the system
             runners.push(Self::spawn_thread(s, "viorn-stopper".into(), || {
-                let sig = sig_sub.wait();
-                if std::matches!(sig, lid::signal::SIGINT | lid::signal::SIGTERM) {
-                    logger.stop();
-                }
+                let _ = sig_sub.wait();
+                logger.stop();
             }));
             for i in 0..cnt_runners {
                 runners.push(Self::spawn_thread(s, "viorn-runner".into(), move || {
