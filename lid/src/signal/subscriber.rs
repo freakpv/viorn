@@ -32,11 +32,9 @@ extern "C" fn signal_handler(sig: libc::c_int) {
     PENDING_SIGNALS.notify_all();
 }
 
-// TODO: Add bitmask type
-
 impl Subscriber {
     // Returns a bit-mask with the received signals
-    pub fn wait(&self) -> u32 {
+    pub fn wait(&self) -> super::Bitmask {
         use crate::atomic_ext::AtomicExt;
         loop {
             // Continue waiting if the wait was interrupted but the value hasn't changed.
@@ -52,32 +50,31 @@ impl Subscriber {
                 },
             );
             if let Ok(rs) = recv_sigs {
-                return rs & self.sub_sigs;
+                return super::Bitmask {
+                    bits: rs & self.sub_sigs,
+                };
             }
         }
     }
 }
 
-// Accepts a bit-mask with the signals to listen for.
-pub fn subscribe(signals: u32) -> io::Result<Subscriber> {
+pub fn subscribe(signals: &[u32]) -> io::Result<Subscriber> {
     let mut handlers = fastvec::SmallVec::<(i32, libc::sighandler_t), 8>::new();
     let sig_hnd = signal_handler as extern "C" fn(_) as libc::sighandler_t;
-    let mut sigs = signals;
-    while sigs != 0 {
-        let sig = sigs.trailing_zeros();
-        sigs &= sigs - 1;
-        match unsafe { libc::signal(sig as i32, sig_hnd) } {
+    for sig in signals {
+        assert!((1..u32::BITS).contains(sig));
+        match subscribe_signal(*sig as i32, sig_hnd) {
             libc::SIG_ERR => {
                 // Restore the signal handlers
                 handlers.iter().for_each(|pair| {
-                    unsafe { libc::signal(pair.0, pair.1) };
+                    subscribe_signal(pair.0, pair.1);
                 });
                 return Err(io::Error::new(
                     io::ErrorKind::InvalidInput,
                     format!("Invalid signal number: {}", sig),
                 ));
             }
-            handler => handlers.push((sig as i32, handler)),
+            handler => handlers.push((*sig as i32, handler)),
         }
     }
     Ok(Subscriber {
@@ -86,4 +83,9 @@ pub fn subscribe(signals: u32) -> io::Result<Subscriber> {
             .iter()
             .fold(0u32, |mask, &pair| mask | (1u32 << pair.0)),
     })
+}
+
+#[inline]
+fn subscribe_signal(sig: i32, hnd: libc::sighandler_t) -> libc::sighandler_t {
+    unsafe { libc::signal(sig, hnd) }
 }

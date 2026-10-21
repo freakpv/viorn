@@ -31,7 +31,7 @@ pub(super) struct Logging {
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 // Open ended port range
-#[derive(Clone, Copy, Deserialize)]
+#[derive(Clone, Copy, Debug, Deserialize)]
 pub(super) struct PortRange {
     beg: u16,
     end: u16,
@@ -46,12 +46,6 @@ impl PortRange {
 impl fmt::Display for PortRange {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "[{}-{})", self.beg, self.end)
-    }
-}
-
-impl fmt::Debug for PortRange {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        fmt::Display::fmt(self, f)
     }
 }
 

@@ -1,5 +1,8 @@
+pub mod bitmask;
 pub mod subscriber;
 
+pub use bitmask::signal_description;
+pub use bitmask::Bitmask;
 pub use subscriber::subscribe;
 pub use subscriber::Subscriber;
 

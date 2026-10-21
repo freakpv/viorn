@@ -15,7 +15,7 @@ pub struct Viorn {
 impl Viorn {
     pub fn new<P: AsRef<Path>>(config_path: P) -> anyhow::Result<Viorn> {
         use lid::signal;
-        let sig_sub = signal::subscribe(lid::bitmask!(signal::SIGINT, signal::SIGTERM))?;
+        let sig_sub = signal::subscribe(&[signal::SIGINT, signal::SIGTERM])?;
         let config = std::fs::read_to_string(&config_path)
             .with_context(|| format!("Failed to read config {}", config_path.as_ref().display()))
             .and_then(|config_data| Config::load(&config_data))?;
