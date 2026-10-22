@@ -2,3 +2,6 @@
 resolver = "3"
 members = ["lid","viorn"]
 
+[workspace.lints.clippy]
+redundant_field_names = "allow"
+

@@ -6,3 +6,6 @@ edition = "2024"
 [dependencies]
 fastvec = "2.0.1"
 libc = "0.2.190"
+
+[lints]
+workspace = true

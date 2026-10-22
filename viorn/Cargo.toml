@@ -10,3 +10,6 @@ getopts = "0.2"
 serde = { version = "1.0.229", features = ["derive"] }
 toml = "1.1.7"
 lid = { path = "../lid" }
+
+[lints]
+workspace = true
