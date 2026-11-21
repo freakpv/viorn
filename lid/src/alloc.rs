@@ -1,3 +1,3 @@
-pub mod stack_alloc;
+pub mod bump_alloc;
 
-pub use stack_alloc::StackAllocator;
+pub use bump_alloc::BumpAllocator;

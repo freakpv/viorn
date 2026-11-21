@@ -37,6 +37,9 @@ impl Viorn {
             [Box::new(sliding_log) as Box<dyn lid::log::LogSink>],
         );
 
+        let mut mem = [0u8; 1024];
+        let _ = lid::alloc::BumpAllocator::with_upstream(&mut mem, std::alloc::System);
+
         Ok(Viorn {
             logger: logger,
             sig_sub: sig_sub,
