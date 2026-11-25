@@ -8,7 +8,7 @@ use super::lock_guard::{BasicLockGuard, BasicRawMutex};
 use std::cell::UnsafeCell;
 use std::sync::atomic::{AtomicBool, Ordering};
 
-struct BasicRawSpinLock(AtomicBool);
+pub struct BasicRawSpinLock(AtomicBool);
 
 impl BasicRawMutex for BasicRawSpinLock {
     fn lock(&self) {
@@ -33,11 +33,24 @@ impl<T> BasicSpinLock<T> {
             data: UnsafeCell::new(val),
         }
     }
-    fn lock(&self) -> BasicLockGuard<'_, T, BasicRawSpinLock> {
+    pub fn lock(&self) -> BasicLockGuard<'_, T, BasicRawSpinLock> {
         self.lock.lock();
         // The Mutex is locked and this ensures that the preconditions for calling
         // UnsafeCell::as_mut_unchecked are met and there will be no UB introduced.
         unsafe { BasicLockGuard::new(&self.lock, self.data.as_mut_unchecked()) }
+    }
+    /// Since this call borrows the mutex mutably, no actual locking needs to
+    /// take place -- the mutable borrow statically guarantees no new locks can be acquired
+    /// while this reference exists.
+    pub fn get_mut(&mut self) -> &mut T {
+        self.data.get_mut()
+    }
+    /// Consumes this mutex, returning the underlying data.
+    pub fn into_inner(self) -> T
+    where
+        T: Sized,
+    {
+        self.data.into_inner()
     }
 }
 

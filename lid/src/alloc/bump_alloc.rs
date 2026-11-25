@@ -8,8 +8,7 @@ struct Buffer<'a> {
 
 pub struct BumpAllocator<'a, A = alloc::System> {
     upstream: A,
-    // TODO: Replace
-    buffer: std::sync::Mutex<Buffer<'a>>,
+    buffer: crate::sync::BasicSpinLock<Buffer<'a>>,
 }
 
 impl<'a, A> BumpAllocator<'a, A>
@@ -26,7 +25,7 @@ where
 
 unsafe impl<'a, A: alloc::Allocator> alloc::Allocator for BumpAllocator<'a, A> {
     fn allocate(&self, layout: alloc::Layout) -> Result<ptr::NonNull<[u8]>, alloc::AllocError> {
-        let mut mem = self.buffer.lock().unwrap();
+        let mut mem = self.buffer.lock();
         let pos = mem.pos;
         let buf = &mut mem.buf[pos..];
         let base = buf.as_mut_ptr();
@@ -51,7 +50,6 @@ unsafe impl<'a, A: alloc::Allocator> alloc::Allocator for BumpAllocator<'a, A> {
         let is_internal = self
             .buffer
             .lock()
-            .unwrap()
             .buf
             .as_ptr_range()
             .contains(&ptr.as_ptr().cast_const());
