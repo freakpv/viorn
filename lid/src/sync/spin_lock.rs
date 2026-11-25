@@ -2,7 +2,7 @@
 // The idea is this one to be used for the cases where something won't be actually used in MT
 // scenario but you still need to wrap it in a Mutex/Lock to satisfy the borrow checker.
 // One example for above scenario is Arena allocator which is used locally in a given function.
-// std::sync::nonpoisen::Mutex is OK in size (4 bytes overhead) but the generated assembly
+// std::sync::nonpoison::Mutex is OK in size (4 bytes overhead) but the generated assembly
 // is a bit bigger due to the contention handling logic and the system calls.
 use super::lock_guard::{BasicLockGuard, BasicRawMutex};
 use std::cell::UnsafeCell;

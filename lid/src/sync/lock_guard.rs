@@ -14,7 +14,7 @@ pub struct BasicLockGuard<'a, T: ?Sized + 'a, M: BasicRawMutex + 'a> {
 
 impl<'a, T: ?Sized + 'a, M: BasicRawMutex + 'a> BasicLockGuard<'a, T, M> {
     /// The caller of this function is expected to have locked the given Mutex
-    pub unsafe fn new(m: &'a M, d: &'a mut T) -> Self {
+    pub(crate) unsafe fn new(m: &'a M, d: &'a mut T) -> Self {
         BasicLockGuard { mutex: m, data: d }
     }
 }
