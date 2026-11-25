@@ -38,7 +38,8 @@ impl Viorn {
         );
 
         let mut mem = [0u8; 1024];
-        let _ = lid::alloc::BumpAllocator::with_upstream(&mut mem, std::alloc::System);
+        let alloc = lid::alloc::BumpAllocator::with_upstream(&mut mem, std::alloc::System);
+        let _: Vec<i32, lid::alloc::BumpAllocator> = Vec::new_in(alloc);
 
         Ok(Viorn {
             logger: logger,
